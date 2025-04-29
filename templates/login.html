@@ -1,0 +1,36 @@
+<!-- templates/login.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+</head>
+<body>
+    <h2>Login</h2>
+
+    {% if error %}
+        <p style="color:red;">{{ error }}</p>
+    {% endif %}
+    {% if success %}
+        <p style="color:green;">{{ success }}</p>
+    {% endif %}
+
+    <!-- Manual Login Form -->
+    <form method="POST" action="/login">
+        <input type="text" name="username_email" placeholder="Username or Email" required><br><br>
+        <input type="password" name="password" placeholder="Password" required><br><br>
+        <label><input type="checkbox" name="remember"> Remember Me</label><br><br>
+        <button type="submit">Login</button>
+    </form>
+
+    <br><hr><br>
+
+    <!-- GitHub OAuth Login -->
+    <a href="{{ url_for('github_login') }}">
+        <button>Login with GitHub</button>
+    </a>
+
+    <p>Don't have an account? <a href="/signup">Signup here</a>.</p>
+</body>
+</html>
