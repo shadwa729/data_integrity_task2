@@ -1,28 +1,29 @@
-<!-- templates/signup.html -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Signup</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h2>Signup</h2>
+    <div class="container">
+        <h2>Signup</h2>
 
-    {% if error %}
-        <p style="color:red;">{{ error }}</p>
-    {% endif %}
-    {% if success %}
-        <p style="color:green;">{{ success }}</p>
-    {% endif %}
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+        {% if success %}
+            <p class="success">{{ success }}</p>
+        {% endif %}
 
-    <form method="POST" action="/signup">
-        <input type="text" name="username" placeholder="Username" required><br><br>
-        <input type="email" name="email" placeholder="Email" required><br><br>
-        <input type="password" name="password" placeholder="Password" required><br><br>
-        <button type="submit">Register</button>
-    </form>
+        <form method="POST" action="/signup">
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="email" name="email" placeholder="Email" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Register</button>
+        </form>
 
-    <p>Already have an account? <a href="/login">Login here</a>.</p>
+        <p>Already have an account? <a href="/login">Login here</a>.</p>
+    </div>
 </body>
 </html>
