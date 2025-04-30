@@ -1,5 +1,3 @@
-# app.py
-
 from flask import Flask, render_template, request, redirect, url_for, session, make_response
 from flask_mysqldb import MySQL
 from flask_bcrypt import Bcrypt
@@ -9,34 +7,29 @@ import requests
 from datetime import timedelta
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key' 
+app.secret_key = 'your_secret_key'
 
-# Secure session settings
+# Session config
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = False  # Set True only if using HTTPS
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True only on HTTPS
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-
-# Session lifetime
 app.permanent_session_lifetime = timedelta(minutes=30)
 
-# MySQL configuration
+# MySQL config
 app.config['MYSQL_HOST'] = config.DB_HOST
 app.config['MYSQL_USER'] = config.DB_USER
 app.config['MYSQL_PASSWORD'] = config.DB_PASSWORD
 app.config['MYSQL_DB'] = config.DB_NAME
 
-# Initialize MySQL and Bcrypt
 mysql = MySQL(app)
 bcrypt = Bcrypt(app)
 
-# Home route 
 @app.route('/')
 def home():
     if 'user_id' in session:
         return render_template('home.html', username=session['username'])
     return redirect(url_for('login'))
 
-# Test database connection route
 @app.route('/test_db')
 def test_db():
     try:
@@ -46,7 +39,6 @@ def test_db():
     except Exception as e:
         return f'Error connecting to database: {str(e)}'
 
-# Signup route
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -61,9 +53,7 @@ def signup():
 
         cur = mysql.connection.cursor()
         cur.execute("SELECT * FROM users WHERE username = %s OR email = %s", (username, email))
-        existing_user = cur.fetchone()
-
-        if existing_user:
+        if cur.fetchone():
             return render_template('signup.html', error="Username or email already exists.")
 
         cur.execute(
@@ -72,45 +62,54 @@ def signup():
         )
         mysql.connection.commit()
         cur.close()
-
         return render_template('signup.html', success="Account created successfully. Please login.")
     return render_template('signup.html')
 
-# Login route
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    cur = mysql.connection.cursor()
     if request.method == 'POST':
         username_email = request.form['username_email']
         password = request.form['password']
         remember = request.form.get('remember')
 
-        cur = mysql.connection.cursor()
         cur.execute("SELECT * FROM users WHERE username = %s OR email = %s", (username_email, username_email))
         user = cur.fetchone()
 
-        if user and bcrypt.check_password_hash(user[3], password):  # user[3] = password field
+        ip_address = request.remote_addr
+        user_agent = request.headers.get('User-Agent')
+        method = "manual"
+
+        if user and bcrypt.check_password_hash(user[3], password):
             session.permanent = True if remember else False
             session['user_id'] = user[0]
             session['username'] = user[1]
 
-            # Log login activity
-            ip_address = request.remote_addr
-            cur.execute("INSERT INTO login_logs (user_id, ip_address) VALUES (%s, %s)", (user[0], ip_address))
+            cur.execute(
+                "INSERT INTO login_logs (user_id, ip_address, user_agent, method, success, details) "
+                "VALUES (%s, %s, %s, %s, %s, %s)",
+                (user[0], ip_address, user_agent, method, True, "Login successful")
+            )
             mysql.connection.commit()
             cur.close()
-
             return redirect(url_for('home'))
+
         else:
+            cur.execute(
+                "INSERT INTO login_logs (user_id, ip_address, user_agent, method, success, details) "
+                "VALUES (%s, %s, %s, %s, %s, %s)",
+                (None, ip_address, user_agent, method, False, "Invalid credentials")
+            )
+            mysql.connection.commit()
+            cur.close()
             return render_template('login.html', error="Invalid credentials.")
     return render_template('login.html')
 
-# GitHub OAuth login route
 @app.route('/github/login')
 def github_login():
     github_authorize_url = f"https://github.com/login/oauth/authorize?client_id={config.GITHUB_CLIENT_ID}&scope=user:email"
     return redirect(github_authorize_url)
 
-# GitHub OAuth callback route
 @app.route('/github/callback')
 def github_callback():
     code = request.args.get('code')
@@ -128,7 +127,6 @@ def github_callback():
     if not access_token:
         return redirect(url_for('login'))
 
-    # Get user info
     user_info_url = 'https://api.github.com/user'
     headers = {'Authorization': f'token {access_token}'}
     user_info_response = requests.get(user_info_url, headers=headers)
@@ -152,19 +150,23 @@ def github_callback():
         mysql.connection.commit()
         user_id = cur.lastrowid
 
-    # Create session
     session['user_id'] = user_id
     session['username'] = username
 
-    # Log login activity
     ip_address = request.remote_addr
-    cur.execute("INSERT INTO login_logs (user_id, ip_address) VALUES (%s, %s)", (user_id, ip_address))
+    user_agent = request.headers.get('User-Agent')
+    method = "github"
+
+    cur.execute(
+        "INSERT INTO login_logs (user_id, ip_address, user_agent, method, success, details) "
+        "VALUES (%s, %s, %s, %s, %s, %s)",
+        (user_id, ip_address, user_agent, method, True, "GitHub login successful")
+    )
     mysql.connection.commit()
     cur.close()
 
     return redirect(url_for('home'))
 
-# Logout route
 @app.route('/logout')
 def logout():
     session.clear()
@@ -172,7 +174,6 @@ def logout():
     resp.headers['Cache-Control'] = 'no-store'
     return resp
 
-# Password validation function
 def validate_password(password):
     if (len(password) >= 8 and
         re.search(r"[A-Z]", password) and
