@@ -31,12 +31,14 @@ input[type="text"],
 input[type="email"],
 input[type="password"] {
     width: 100%;
-    padding: 12px;
+    padding: 12px 40px 12px 12px; /* match password field padding */
     margin: 8px 0 16px 0;
     border: 1px solid #ccc;
     border-radius: 8px;
+    box-sizing: border-box;
     transition: border-color 0.3s;
 }
+
 
 input:focus {
     border-color: #667eea;
@@ -85,6 +87,31 @@ hr {
 .success {
     color: green;
     font-weight: bold;
+}
+.password-container {
+    position: relative;
+    width: 100%;
+    margin-bottom: 16px;
+    box-sizing: border-box; /* Important to contain padding */
+    overflow: hidden; /* Prevent overflow */
+}
+
+.password-container input[type="password"],
+.password-container input[type="text"] {
+    width: 100%;
+    padding: 12px 40px 12px 12px; /* Room for the icon */
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+.toggle-password {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 20px;
+    color: #666;
 }
 
 @keyframes fadeIn {
