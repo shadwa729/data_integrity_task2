@@ -49,8 +49,9 @@ def signup():
         email = request.form['email']
         password = request.form['password']
 
-        if not validate_password(password):
-            return render_template('signup.html', error="Password does not meet policy requirements.")
+        password_errors = validate_password(password)
+        if password_errors:
+            return render_template('signup.html', error=" ".join(password_errors))
 
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
@@ -71,10 +72,13 @@ def signup():
         return render_template('signup.html', success="Account created successfully. Please login.")
     return render_template('signup.html')
 
+
 # Login route
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     cur = mysql.connection.cursor()
+    message = request.args.get('message')  # Capture the message
+    
     if request.method == 'POST':
         username_email = request.form['username_email']
         password = request.form['password']
@@ -112,7 +116,7 @@ def login():
             mysql.connection.commit()
             cur.close()
             return render_template('login.html', error="Invalid credentials.")
-    return render_template('login.html')
+    return render_template('login.html', message=message)
 
 # GitHub OAuth login route
 @app.route('/github/login')
@@ -184,19 +188,28 @@ def github_callback():
 @app.route('/logout')
 def logout():
     session.clear()
-    resp = make_response(redirect(url_for('login')))
+    resp = make_response(redirect(url_for('login', message="You have logged out successfully.")))
     resp.headers['Cache-Control'] = 'no-store'
     return resp
 
+
 # Password validation function
 def validate_password(password):
-    if (len(password) >= 8 and
-        re.search(r"[A-Z]", password) and
-        re.search(r"[a-z]", password) and
-        re.search(r"[0-9]", password) and
-        re.search(r"[!@#$%^&*(),.?\":{}|<>]", password)):
-        return True
-    return False
+    errors = []
+    
+    if len(password) < 8:
+        errors.append("Password must be at least 8 characters long.")
+    if not re.search(r"[A-Z]", password):
+        errors.append("Password must contain at least one uppercase letter.")
+    if not re.search(r"[a-z]", password):
+        errors.append("Password must contain at least one lowercase letter.")
+    if not re.search(r"[0-9]", password):
+        errors.append("Password must contain at least one digit.")
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+        errors.append("Password must contain at least one special character.")
+    
+    return errors
+
 
 if __name__ == "__main__":
     app.run(debug=True)
