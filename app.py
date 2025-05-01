@@ -28,8 +28,19 @@ bcrypt = Bcrypt(app)
 @app.route('/')
 def home():
     if 'user_id' in session:
-        return render_template('home.html', username=session['username'])
+        # Create the response object with the rendered template
+        resp = make_response(render_template('home.html', username=session['username']))
+        
+        # Add cache control headers
+        resp.headers['Cache-Control'] = 'no-store'
+        resp.headers['Pragma'] = 'no-cache'
+        resp.headers['Expires'] = '0'
+        
+        # Return the response with headers
+        return resp
+    
     return redirect(url_for('login'))
+
 
 # Test database connection route
 @app.route('/test_db')
@@ -190,6 +201,8 @@ def logout():
     session.clear()
     resp = make_response(redirect(url_for('login', message="You have logged out successfully.")))
     resp.headers['Cache-Control'] = 'no-store'
+    resp.headers['Pragma'] = 'no-cache'         # Prevent caching in older browsers
+    resp.headers['Expires'] = '0'               # Ensure the page is not cached
     return resp
 
 
